@@ -34,13 +34,15 @@ class Relation(object):
 class BaseGraph(object):
     """Base Cypher query methods"""
 
-    def fetch(self, query):
+    @classmethod
+    def fetch(cls, query):
         q = get_graph().cypher.query(query)
         if q:
             return q.next()
         return None
 
-    def fetch_all(self, query):
+    @classmethod
+    def fetch_all(cls, query):
         q = get_graph().cypher.query(query)
         if not q:
             return []

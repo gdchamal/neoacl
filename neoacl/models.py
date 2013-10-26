@@ -35,17 +35,17 @@ class Group(BaseModel):
     description = String()
 
 
-class haveResource(BaseRelation):
+class HaveResource(BaseRelation):
 
     label = 'have_resource'
 
 
-class haveGroup(BaseRelation):
+class HaveGroup(BaseRelation):
 
     label = 'have_group'
 
 
-class allow(BaseRelation):
+class Permission(BaseRelation):
 
-    label = 'allow'
+    label = 'permission'
     method = String(nullable=False)
