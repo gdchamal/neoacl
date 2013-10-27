@@ -6,6 +6,10 @@ class UserError(Exception):
     pass
 
 
+class ResourceError(Exception):
+    pass
+
+
 class GroupError(Exception):
     pass
 
@@ -81,10 +85,18 @@ class UserManager(BaseUserManager):
         return resource.eid
 
     def delete_resource(self, type, ext_id):
-        raise NotImplementedError()
+        resource = filter(lambda x: x.type == type and x.external_id == ext_id,
+                          self.user.resources)
+        if not resource:
+            raise ResourceError('Invalid resource')
+        resource = resource[0]
+        if not resource.eid in [x.eid for x in self.user.resources]:
+            raise ResourceError('Permission denied')
+        resource.delete()
+        return True
 
     def create_group(self, name, description=None):
-        exist = Group.by_name(name, False)
+        exist = filter(lambda x: x.name == name, self.user.groups)
         if exist:
             raise GroupError('Group %s already exist for user %s' %
                              (name, exist.user.name))
@@ -93,13 +105,18 @@ class UserManager(BaseUserManager):
         return group.eid
 
     def delete_group(self, name):
-        raise NotImplementedError()
+        group = filter(lambda x: x.name == name, self.user.groups)
+        if not group:
+            raise GroupError('Invalid group')
+        group[0].delete()
+        return True
 
     def group_add_user(self, groupname, username):
         user = self._check_user(username)
-        group = Group.by_name(groupname, False)
+        group = filter(lambda x: x.name == groupname, self.user.groups)
         if not group:
             raise GroupError('Group %s not found' % groupname)
+        group = group[0]
         # XXX : do better list comprehension with core object
         if not group.eid in [x.eid for x in self.user.groups]:
             raise PermissionError('Permission denied for user %s' %
@@ -111,20 +128,37 @@ class UserManager(BaseUserManager):
         return rel.eid
 
     def group_delete_user(self, groupname, username):
-        raise NotImplementedError()
+        user = self._check_user(username)
+        group = filter(lambda x: x.name == groupname, self.user.groups)
+        if not group:
+            raise GroupError('Invalid group')
+        nb_del = group._detach('users', user)
+        return nb_del
 
-    def allow(self, type, resource_ext_id, group_name, **kwargs):
+    def group_list_users(self, groupname):
+        group = filter(lambda x: x.name == groupname, self.user.groups)
+        if not group:
+            raise GroupError('Invalid group')
+        return group[0].users
+
+    def group_list_resources(self, groupname):
+        group = filter(lambda x: x.name == groupname, self.user.groups)
+        if not group:
+            raise GroupError('Invalid group')
+        return group[0].resources
+
+    def allow(self, type, resource_ext_id, groupname, **kwargs):
         # XXX : not kwargs, method instead
-        group = Group.by_name(group_name)
+        group = filter(lambda x: x.name == groupname, self.user.groups)
         resource = Resource.by_external_type_id(type, resource_ext_id)
-        # XXX factorize
-        if not group.eid in [x.eid for x in self.user.groups]:
-            raise PermissionError('Permission denied for %s' %
-                                  (self.user.name))
+        if not group:
+            raise GroupError('Invalid group')
+        group = group[0]
+
         if not resource.eid in [x.eid for x in self.user.resources]:
             raise PermissionError('Permission denied for %s' %
                                   (self.user.name))
-        relation = group._attach('permissions', resource, **kwargs)
+        relation = group._attach('resources', resource, **kwargs)
         return relation.eid
 
     def revoke(self, rule_id):
@@ -141,9 +175,5 @@ class PermissionManager(BaseUserManager):
 
     def check(self, username, type, ext_id, method='read'):
         """"Rule them all"""
-        resource = Resource.by_external_type_id(type, ext_id)
         user = self._check_user(username)
-        if not resource:
-            raise PermissionError('Invalid resource')
-        perms = resource.check_permission(self.user, user, method)
-        return True if perms else False
+        return Resource.check_permission(self.user, user, type, ext_id, method)

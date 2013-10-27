@@ -1,5 +1,4 @@
 from .helpers.base import BaseCore, Relation
-from .helpers.conf import CONF
 
 from .models import (User as MUser, Resource as MResource,
                      Group as MGroup, HaveResource, HaveGroup,
@@ -30,7 +29,8 @@ class Resource(BaseCore):
         raise ValueError("%s with external_id %s.%s not found" %
                          (cls.__name__, type, external_id))
 
-    def check_permission(self, owner, user, method):
+    @classmethod
+    def check_permission(self, owner, user, type, ext_id, method):
         """Here magic happen, only a graph traversal query
 
         The question is: does this resource have method permission
@@ -38,13 +38,13 @@ class Resource(BaseCore):
         """
 
         query = """start a=node(%d)
-        match a-[:in_group]-(b)-[p:permission]-(c)-[:have_resource]-d
-        where c.eid = %d
-        and d.eid = %d
+        match a<-[:in_group]-b-[p:permission]-c-[:have_resource]->d
+        where c.type = "%s" and c.external_id = %d
+        and d.name = "%s"
         and p.method = "%s"
-        return b""" % (user.eid, self.eid, owner.eid, method)
-        groups = self.fetch_all(query)
-        return [Group(x) for x in groups]
+        return p""" % (user.eid, type, ext_id, owner.name, method)
+        perms = self.fetch_all(query)
+        return True if perms else False
 
 
 class Group(BaseCore):
@@ -52,7 +52,7 @@ class Group(BaseCore):
     _model_class = MGroup
 
     relations = {
-        'permissions': Relation(Resource, Permission, min=0),
+        'resources': Relation(Resource, Permission, min=0),
         'users': Relation('User', InGroup, min=0),
     }
 
@@ -78,7 +78,8 @@ class User(BaseCore):
 
     def list_permissions(self, filters=None):
         query = """start a=node(%d)
-        match a-[:have_group]-(b)-[p:have_permission]-(c)
-        return p.method, c"""
-        results = self.fetch_all(query)
+        match a-[:in_group]-(b)-[p:permission]-(c)
+        return b.name as group, p.method as method,
+        c.type as resource_type, c.external_id as resource_id""" % (self.eid)
+        results = self.fetch_table(query)
         return results
