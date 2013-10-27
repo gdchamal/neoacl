@@ -24,11 +24,21 @@ def get_core(node):
 
 class Relation(object):
     def __init__(self, dest, edge, min=0, max=None, can_attach=False):
-        self.dest = dest
+        self._dest = dest
         self.edge = edge
         self.min = min
         self.max = max
         self.can_attach = can_attach
+
+    @property
+    def dest(self):
+        """Defer lookup of class, avoid circular dependency evil"""
+
+        # XXX: find another way to find module
+        if isinstance(self._dest, str):
+            module = __import__('neoacl.core', fromlist=self._dest)
+            return getattr(module, self._dest)
+        return self._dest
 
 
 class BaseGraph(object):
@@ -44,6 +54,14 @@ class BaseGraph(object):
     @classmethod
     def fetch_all(cls, query):
         q = get_graph().cypher.query(query)
+        if not q:
+            return []
+
+        return list(q)
+
+    @classmethod
+    def fetch_table(cls, query):
+        q = get_graph().cypher.table(query)
         if not q:
             return []
 
