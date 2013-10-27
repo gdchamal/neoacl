@@ -1,5 +1,5 @@
 from bulbs.model import Node, Relationship
-from bulbs.property import String, Integer, DateTime, Bool
+from bulbs.property import String, Integer, DateTime
 from bulbs.utils import current_datetime
 
 
@@ -14,7 +14,7 @@ class BaseRelation(Relationship):
 
 class User(BaseModel):
 
-    element_type = "user"
+    element_type = 'user'
     name = String(nullable=False)
     external_id = Integer(nullable=False)
 
@@ -49,3 +49,8 @@ class Permission(BaseRelation):
 
     label = 'permission'
     method = String(nullable=False)
+
+
+class InGroup(BaseRelation):
+
+    label = 'in_group'
