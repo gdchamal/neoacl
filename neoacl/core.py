@@ -16,7 +16,7 @@ class Resource(BaseCore):
         return User(obj)
 
     @classmethod
-    def by_external_type_id(cls, type, external_id):
+    def by_external_type_id(cls, type, external_id, doraise=True):
         query = """start a=node(*)
                 match a-[:have_resource]-b
                 where has(a.element_type) and
@@ -26,8 +26,10 @@ class Resource(BaseCore):
         entities = cls.fetch_all(query)
         if entities and len(entities) == 1:
             return cls(entities[0])
-        raise ValueError("%s with external_id %s.%s not found" %
-                         (cls.__name__, type, external_id))
+        if doraise:
+            raise ValueError("%s with external_id %s.%s not found" %
+                             (cls.__name__, type, external_id))
+        return None
 
     @classmethod
     def check_permission(self, user, type, ext_id, method):

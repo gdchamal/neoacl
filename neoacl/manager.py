@@ -79,7 +79,10 @@ class UserManager(BaseUserManager):
 
     def create_resource(self, type, ext_id):
         name = '%s#%d' % (type, ext_id)
-        # XXX : check if exist on type, ext_id
+        # Same resource can't exist even for different user
+        exist = Resource.by_external_type_id(type, ext_id, False)
+        if exist:
+            raise ResourceError('Resource exist')
         resource = Resource.create(name=name, type=type, external_id=ext_id)
         self.user._attach('resources', resource)
         return resource.eid
@@ -99,7 +102,7 @@ class UserManager(BaseUserManager):
         exist = filter(lambda x: x.name == name, self.user.groups)
         if exist:
             raise GroupError('Group %s already exist for user %s' %
-                             (name, exist.user.name))
+                             (name, self.user.name))
         group = Group.create(name=name, description=description)
         self.user._attach('groups', group)
         return group.eid
