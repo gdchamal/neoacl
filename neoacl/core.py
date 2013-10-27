@@ -1,8 +1,9 @@
-from .helpers.base import (BaseCore, Relation, CoreException, CoreExists)
+from .helpers.base import BaseCore, Relation
 from .helpers.conf import CONF
 
 from .models import (User as MUser, Resource as MResource,
-                     Group as MGroup, HaveResource, HaveGroup, Permission)
+                     Group as MGroup, HaveResource, HaveGroup,
+                     Permission, InGroup)
 
 
 class Resource(BaseCore):
@@ -29,7 +30,7 @@ class Resource(BaseCore):
         raise ValueError("%s with external_id %s.%s not found" %
                          (cls.__name__, type, external_id))
 
-    def check_permission(self, username, method):
+    def check_permission(self, owner, user, method):
         """Here magic happen, only a graph traversal query
 
         The question is: does this resource have method permission
@@ -37,10 +38,11 @@ class Resource(BaseCore):
         """
 
         query = """start a=node(%d)
-        match a-[p:have_permission]-(b)-[:have_group]-(c)
-        where c.name = "%s"
+        match a-[:in_group]-(b)-[p:permission]-(c)-[:have_resource]-d
+        where c.eid = %d
+        and d.eid = %d
         and p.method = "%s"
-        return b""" % (self.eid, username, method)
+        return b""" % (user.eid, self.eid, owner.eid, method)
         groups = self.fetch_all(query)
         return [Group(x) for x in groups]
 
@@ -51,6 +53,7 @@ class Group(BaseCore):
 
     relations = {
         'permissions': Relation(Resource, Permission, min=0),
+        'users': Relation('User', InGroup, min=0),
     }
 
 
@@ -64,13 +67,13 @@ class User(BaseCore):
     }
 
     @classmethod
-    def by_external_id(cls, external_id):
+    def by_external_id(cls, external_id, doraise=True):
         obj = cls.get_proxy().index.lookup(external_id=external_id)
         if obj:
             return cls(obj.next())
         if doraise:
             raise ValueError("%s with external_id %s not found" %
-                             (cls.__name__, mbid))
+                             (cls.__name__, external_id))
         return None
 
     def list_permissions(self, filters=None):
