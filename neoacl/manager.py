@@ -176,6 +176,10 @@ class UserManager(BaseUserManager):
 
 class PermissionManager(BaseUserManager):
 
-    def check(self, type, ext_id, method='read'):
+    def check(self, ownername, type, ext_id, method='read'):
         """"Rule them all"""
-        return Resource.check_permission(self.user, type, ext_id, method)
+        return Resource.check_permission(ownername,
+                                         self.user,
+                                         type,
+                                         ext_id,
+                                         method)

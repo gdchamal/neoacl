@@ -32,7 +32,7 @@ class Resource(BaseCore):
         return None
 
     @classmethod
-    def check_permission(self, user, type, ext_id, method):
+    def check_permission(self, ownername, user, type, ext_id, method):
         """Here magic happen, only a graph traversal query
 
         The question is: does this resource have method permission
@@ -40,10 +40,11 @@ class Resource(BaseCore):
         """
 
         query = """start a=node(%d)
-        match a<-[:in_group]-b-[p:permission]-c
-        where c.type = "%s" and c.external_id = %d
+        match a<-[:in_group]-b-[p:permission]-c-[:have_resource]-d
+        where d.name = "%s"
+        and c.type = "%s" and c.external_id = %d
         and p.method = "%s"
-        return p""" % (user.eid, type, ext_id, method)
+        return p""" % (user.eid, ownername, type, ext_id, method)
         perms = self.fetch_all(query)
         return True if perms else False
 
