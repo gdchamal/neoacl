@@ -19,11 +19,11 @@ There is 3 different context manager to implement in your application.
 
 used to create, delete users
 
-`from neoacl.manager import AdminManager
+```from neoacl.manager import AdminManager
 m = AdminManager()
 m.create_user('test1')
 m.create_user('test2')
-`
+```
 
 ### 2 - User Manager
 
@@ -33,26 +33,26 @@ Others users must be included in groups, and permissions
 between group and resource allowed to permit minimal working
 data.
 
-`from neoacl.manager import UserManager
+```from neoacl.manager import UserManager
 m = UserManager('test1')
 m.create_resource('server', 123)
 m.create_group('admin_server')
-m.group_add_user('admin_server', 'test2')`
+m.group_add_user('admin_server', 'test2')```
 
 Permit read access on server 123 to group admin_server
 
-`m.allow('server', 123, 'admin_server', 'read')`
+```m.allow('server', 123, 'admin_server', 'read')```
 
 ### 3 - Permission Manager
 
 That the aim of this component, to simpliy permit permission
 check against resource for a user.
 
-`from neoacl.manager import PermissionManager
+```from neoacl.manager import PermissionManager
 m = PermissionManager('test2')
 
 if m.check('server', 123, 'read'):
     return "Access granted"
 else:
     return "Access denied"
-`
+```
